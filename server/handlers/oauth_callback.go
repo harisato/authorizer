@@ -83,7 +83,14 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			return
 		}
 
-		existingUser, err := db.Provider.GetUserByEmail(ctx, user.Email)
+		existingUser := models.User{}
+		if provider == constants.AuthRecipeMethodFacebook {
+			existingUser, err = db.Provider.GetUserByFbId(ctx, user.FbId)
+			fmt.Println("existingUser", existingUser)
+		} else {
+			existingUser, err = db.Provider.GetUserByEmail(ctx, user.Email)
+		}
+
 		log := log.WithField("user", user.Email)
 		isSignUp := false
 
@@ -124,8 +131,10 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			}
 
 			user.Roles = strings.Join(inputRoles, ",")
-			now := time.Now().Unix()
-			user.EmailVerifiedAt = &now
+			if provider != constants.AuthRecipeMethodFacebook {
+				now := time.Now().Unix()
+				user.EmailVerifiedAt = &now
+			}
 			user, _ = db.Provider.AddUser(ctx, user)
 			isSignUp = true
 		} else {
@@ -144,7 +153,7 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			}
 			user.SignupMethods = signupMethod
 
-			if user.EmailVerifiedAt == nil {
+			if user.EmailVerifiedAt == nil && provider != constants.AuthRecipeMethodFacebook {
 				now := time.Now().Unix()
 				user.EmailVerifiedAt = &now
 			}
@@ -459,12 +468,14 @@ func processFacebookUserInfo(code string) (models.User, error) {
 	firstName := fmt.Sprintf("%v", userRawData["first_name"])
 	lastName := fmt.Sprintf("%v", userRawData["last_name"])
 	picture := fmt.Sprintf("%v", picDataObject["url"])
+	fbId := fmt.Sprintf("%v", userRawData["id"])
 
 	user = models.User{
 		GivenName:  &firstName,
 		FamilyName: &lastName,
 		Picture:    &picture,
 		Email:      email,
+		FbId:       fbId,
 	}
 
 	return user, nil
