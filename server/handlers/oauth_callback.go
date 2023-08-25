@@ -83,12 +83,10 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			return
 		}
 
-		existingUser := models.User{}
-		if provider == constants.AuthRecipeMethodFacebook {
+		existingUser, err := db.Provider.GetUserByEmail(ctx, user.Email)
+
+		if err != nil && provider == constants.AuthRecipeMethodFacebook {
 			existingUser, err = db.Provider.GetUserByFbId(ctx, user.FbId)
-			fmt.Println("existingUser", existingUser)
-		} else {
-			existingUser, err = db.Provider.GetUserByEmail(ctx, user.Email)
 		}
 
 		log := log.WithField("user", user.Email)
@@ -131,7 +129,8 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			}
 
 			user.Roles = strings.Join(inputRoles, ",")
-			if provider != constants.AuthRecipeMethodFacebook {
+
+			if user.Email != "<nil>" {
 				now := time.Now().Unix()
 				user.EmailVerifiedAt = &now
 			}
@@ -153,7 +152,7 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			}
 			user.SignupMethods = signupMethod
 
-			if user.EmailVerifiedAt == nil && provider != constants.AuthRecipeMethodFacebook {
+			if user.EmailVerifiedAt == nil && user.Email != "<nil>" {
 				now := time.Now().Unix()
 				user.EmailVerifiedAt = &now
 			}
