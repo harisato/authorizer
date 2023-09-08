@@ -317,6 +317,9 @@ func processGoogleUserInfo(code string) (models.User, error) {
 		return user, fmt.Errorf("unable to extract claims")
 	}
 
+	qualityPicture := strings.ReplaceAll(*user.Picture, "s96-c", "s384-c")
+	user.Picture = &qualityPicture
+
 	return user, nil
 }
 
