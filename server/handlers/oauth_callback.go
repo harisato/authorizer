@@ -58,6 +58,8 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 		user := models.User{}
 		oauthCode := ctx.Request.FormValue("code")
 		switch provider {
+		case constants.AuthRecipeMethodZalo:
+			user, err = processZaloUserInfo(oauthCode)
 		case constants.AuthRecipeMethodGoogle:
 			user, err = processGoogleUserInfo(oauthCode)
 		case constants.AuthRecipeMethodGithub:
@@ -87,6 +89,10 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 
 		if err != nil && provider == constants.AuthRecipeMethodFacebook {
 			existingUser, err = db.Provider.GetUserByFbId(ctx, user.FbId)
+		}
+
+		if err != nil && provider == constants.AuthRecipeMethodZalo {
+			existingUser, err = db.Provider.GetUserByZaloId(ctx, user.ZaloId)
 		}
 
 		log := log.WithField("user", user.Email)
@@ -285,6 +291,58 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 
 		ctx.Redirect(http.StatusFound, redirectURL)
 	}
+}
+
+func processZaloUserInfo(code string) (models.User, error) {
+	user := models.User{}
+	oauth2Token, err := oauth.OAuthProviders.ZaloConfig.Exchange(context.TODO(), code)
+	if err != nil {
+		log.Debug("Invalid zalo exchange code: ", err)
+		return user, fmt.Errorf("invalid zalo exchange code: %s", err.Error())
+	}
+	client := http.Client{}
+	req, err := http.NewRequest("GET", constants.ZaloUserInfoURL, nil)
+	if err != nil {
+		log.Debug("Error creating zalo user info request: ", err)
+		return user, fmt.Errorf("error creating zalo user info request: %s", err.Error())
+	}
+
+	req.Header.Set(
+		"Authorization", fmt.Sprintf("token %s", oauth2Token.AccessToken),
+	)
+
+	response, err := client.Do(req)
+	if err != nil {
+		log.Debug("Failed to process zalo user: ", err)
+		return user, err
+	}
+
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Debug("Failed to read zalo response: ", err)
+		return user, fmt.Errorf("failed to read zalo response body: %s", err.Error())
+	}
+	if response.StatusCode >= 400 {
+		log.Debug("Failed to request zalo user info: ", string(body))
+		return user, fmt.Errorf("failed to request zalo user info: %s", string(body))
+	}
+	userRawData := make(map[string]interface{})
+	json.Unmarshal(body, &userRawData)
+
+	picObject := userRawData["picture"].(map[string]interface{})["data"]
+	picDataObject := picObject.(map[string]interface{})
+	name := fmt.Sprintf("%v", userRawData["name"])
+	picture := fmt.Sprintf("%v", picDataObject["url"])
+	zaloId := fmt.Sprintf("%v", userRawData["id"])
+
+	user = models.User{
+		GivenName: &name,
+		Picture:   &picture,
+		ZaloId:    zaloId,
+	}
+
+	return user, nil
 }
 
 func processGoogleUserInfo(code string) (models.User, error) {
