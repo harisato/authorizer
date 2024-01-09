@@ -117,9 +117,8 @@ func OAuthLoginHandler() gin.HandlerFunc {
 				})
 				return
 			}
-			oauth.OAuthProviders.ZaloConfig.RedirectURL = "https://api.dev.punkga.me/auth/login/zalo"
-			// oauth.OAuthProviders.ZaloConfig.RedirectURL = hostname + "/oauth_callback/" + constants.AuthRecipeMethodZalo
-			url := oauth.OAuthProviders.ZaloConfig.AuthCodeURL(oauthStateString)
+			oauth.OAuthProviders.ZaloConfig.RedirectURL = hostname + "/oauth_callback/" + constants.AuthRecipeMethodZalo
+			url := oauth.OAuthProviders.ZaloConfig.AuthCodeURL(oauthStateString) + "&app_id=" + oauth.OAuthProviders.ZaloConfig.ClientID
 			c.Redirect(http.StatusTemporaryRedirect, url)
 		case constants.AuthRecipeMethodGoogle:
 			if oauth.OAuthProviders.GoogleConfig == nil {

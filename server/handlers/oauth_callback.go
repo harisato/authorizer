@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +28,12 @@ import (
 	"github.com/authorizerdev/authorizer/server/token"
 	"github.com/authorizerdev/authorizer/server/utils"
 )
+
+type TokenJSON struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	RefreshToken string `json:"refresh_token"`
+}
 
 // OAuthCallbackHandler handles the OAuth callback for various oauth providers
 func OAuthCallbackHandler() gin.HandlerFunc {
@@ -295,12 +303,41 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 
 func processZaloUserInfo(code string) (models.User, error) {
 	user := models.User{}
-	oauth2Token, err := oauth.OAuthProviders.ZaloConfig.Exchange(context.TODO(), code)
-	if err != nil {
-		log.Debug("Invalid zalo exchange code: ", err)
-		return user, fmt.Errorf("invalid zalo exchange code: %s", err.Error())
-	}
 	client := http.Client{}
+
+	// get access_token
+	fmt.Println(oauth.OAuthProviders.ZaloConfig.ClientID)
+
+	reqBody := url.Values{}
+	reqBody.Set("code", code)
+	reqBody.Set("app_id", oauth.OAuthProviders.ZaloConfig.ClientID)
+	reqBody.Set("grant_type", "authorization_code")
+
+	reqAccessToken, err := http.NewRequest("POST", oauth.OAuthProviders.ZaloConfig.Endpoint.TokenURL, strings.NewReader(reqBody.Encode()))
+	if err != nil {
+		log.Debug("error creating post request: ", err)
+		return user, err
+	}
+	reqAccessToken.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	reqAccessToken.Header.Set("secret_key", oauth.OAuthProviders.ZaloConfig.ClientSecret)
+	accessTokenResp, err := client.Do(reqAccessToken)
+	if err != nil {
+		log.Debug("error making request: ", err)
+		return user, err
+	}
+	defer accessTokenResp.Body.Close()
+
+	accessTokenBody, err := ioutil.ReadAll(accessTokenResp.Body)
+	if err != nil {
+		log.Debug("error reading response: ", err)
+		return user, err
+	}
+
+	var tj TokenJSON
+	if err = json.Unmarshal(accessTokenBody, &tj); err != nil {
+		return user, err
+	}
+
 	req, err := http.NewRequest("GET", constants.ZaloUserInfoURL, nil)
 	if err != nil {
 		log.Debug("Error creating zalo user info request: ", err)
@@ -308,7 +345,7 @@ func processZaloUserInfo(code string) (models.User, error) {
 	}
 
 	req.Header.Set(
-		"Authorization", fmt.Sprintf("token %s", oauth2Token.AccessToken),
+		"access_token", tj.AccessToken,
 	)
 
 	response, err := client.Do(req)
@@ -327,6 +364,7 @@ func processZaloUserInfo(code string) (models.User, error) {
 		log.Debug("Failed to request zalo user info: ", string(body))
 		return user, fmt.Errorf("failed to request zalo user info: %s", string(body))
 	}
+
 	userRawData := make(map[string]interface{})
 	json.Unmarshal(body, &userRawData)
 

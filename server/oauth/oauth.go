@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 	facebookOAuth2 "golang.org/x/oauth2/facebook"
@@ -196,8 +194,6 @@ func InitOAuth() error {
 	if err != nil {
 		zaloAppID = ""
 	}
-	log.Info("hello")
-	log.Info(zaloAppID)
 	zaloAppSecret, err := memorystore.Provider.GetStringStoreEnvVariable(constants.EnvKeyZaloAppSecret)
 	if err != nil {
 		zaloAppSecret = ""
