@@ -152,6 +152,12 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			isSignUp = true
 		} else {
 			user = existingUser
+			if user.EmailVerifiedAt == nil {
+				log.Debug("User email is not verified")
+				ctx.JSON(500, gin.H{"error": "email not verified"})
+				return
+			}
+
 			if user.RevokedTimestamp != nil {
 				log.Debug("User access revoked at: ", user.RevokedTimestamp)
 				ctx.JSON(400, gin.H{"error": "user access has been revoked"})
