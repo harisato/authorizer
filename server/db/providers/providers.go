@@ -18,6 +18,8 @@ type Provider interface {
 	ListUsers(ctx context.Context, pagination model.Pagination) (*model.Users, error)
 	// GetUserByEmail to get user information from database using email address
 	GetUserByEmail(ctx context.Context, email string) (models.User, error)
+	// GetUserByWalletAddress to get user information from database using wallet address
+	GetUserByWalletAddress(ctx context.Context, addresss string) (models.User, error)
 	// GetUserByFbID to get user information from database using facebook Id
 	GetUserByFbId(ctx context.Context, fbId string) (models.User, error)
 	// GetUserByZaloID to get user information from database using facebook Id
