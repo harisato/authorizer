@@ -68,6 +68,7 @@ func EvmWalletLoginResolver(ctx context.Context, params model.EvmWalletLoginInpu
 	user := models.User{}
 
 	if err != nil {
+		log.Debug("Failed to get existing user: ", err)
 
 		isSignupDisabled, err := memorystore.Provider.GetBoolStoreEnvVariable(constants.EnvKeyDisableSignUp)
 		if err != nil {
@@ -79,7 +80,7 @@ func EvmWalletLoginResolver(ctx context.Context, params model.EvmWalletLoginInpu
 			return res, fmt.Errorf(`bad user credentials`)
 		}
 
-		user.WaletAddress = address.String()
+		user.WalletAddress = address.String()
 
 		// user not registered, register user and generate session token
 		user.SignupMethods = provider
@@ -93,6 +94,7 @@ func EvmWalletLoginResolver(ctx context.Context, params model.EvmWalletLoginInpu
 		isSignUp = true
 	} else {
 		user = existingUser
+		log.Debug("Get existing user OK: ", user.ID)
 		if user.Email != "<nil>" && user.EmailVerifiedAt == nil {
 			log.Debug("User email is not verified")
 			return res, fmt.Errorf(`email not verified`)
@@ -101,6 +103,18 @@ func EvmWalletLoginResolver(ctx context.Context, params model.EvmWalletLoginInpu
 		if user.RevokedTimestamp != nil {
 			log.Debug("User access revoked at: ", user.RevokedTimestamp)
 			return res, fmt.Errorf(`user access has been revoked`)
+		}
+
+		signupMethod := existingUser.SignupMethods
+		if !strings.Contains(signupMethod, provider) {
+			signupMethod = signupMethod + "," + provider
+		}
+		user.SignupMethods = signupMethod
+
+		user, err = db.Provider.UpdateUser(ctx, user)
+		if err != nil {
+			log.Debug("Failed to update user: ", err)
+			return res, fmt.Errorf(err.Error())
 		}
 	}
 
