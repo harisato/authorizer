@@ -79,8 +79,9 @@ func EvmWalletLoginResolver(ctx context.Context, params model.EvmWalletLoginInpu
 			log.Debug("Failed to signup as disabled")
 			return res, fmt.Errorf(`bad user credentials`)
 		}
+		addressStr := address.String()
 
-		user.WalletAddress = address.String()
+		user.WalletAddress = &addressStr
 
 		// user not registered, register user and generate session token
 		user.SignupMethods = provider
