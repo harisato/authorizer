@@ -103,6 +103,11 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			existingUser, err = db.Provider.GetUserByZaloId(ctx, user.ZaloId)
 		}
 
+		if err != nil && provider == constants.AuthRecipeMethodGoogle {
+			now := time.Now().Unix()
+			user.EmailVerifiedAt = &now
+		}
+
 		log := log.WithField("user", user.Email)
 		isSignUp := false
 
@@ -152,11 +157,6 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			isSignUp = true
 		} else {
 			user = existingUser
-			if user.Email != "<nil>" && user.EmailVerifiedAt == nil {
-				log.Debug("User email is not verified")
-				ctx.JSON(500, gin.H{"error": "email not verified"})
-				return
-			}
 
 			if user.RevokedTimestamp != nil {
 				log.Debug("User access revoked at: ", user.RevokedTimestamp)
@@ -172,10 +172,10 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			}
 			user.SignupMethods = signupMethod
 
-			if user.EmailVerifiedAt == nil && user.Email != "<nil>" {
-				now := time.Now().Unix()
-				user.EmailVerifiedAt = &now
-			}
+			// if user.EmailVerifiedAt == nil && user.Email != "<nil>" {
+			// 	now := time.Now().Unix()
+			// 	user.EmailVerifiedAt = &now
+			// }
 
 			// There multiple scenarios with roles here in social login
 			// 1. user has access to protected roles + roles and trying to login
