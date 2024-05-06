@@ -18,6 +18,10 @@ type Provider interface {
 	ListUsers(ctx context.Context, pagination model.Pagination) (*model.Users, error)
 	// GetUserByEmail to get user information from database using email address
 	GetUserByEmail(ctx context.Context, email string) (models.User, error)
+	// GetVerifiedUserByEmail to get verified user information from database using email address
+	GetVerifiedUserByEmail(ctx context.Context, email string) (models.User, error)
+	// DeleteUnverifyEmailUsers to delete unverify users information from database
+	DeleteUnverifyEmailUsers(ctx context.Context, email string) error
 	// GetUserByWalletAddress to get user information from database using wallet address
 	GetUserByWalletAddress(ctx context.Context, addresss string) (models.User, error)
 	// GetUserByFbID to get user information from database using facebook Id

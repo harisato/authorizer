@@ -145,6 +145,19 @@ func (p *provider) GetUserByWalletAddress(ctx context.Context, address string) (
 	return user, nil
 }
 
+// GetVerifiedUserByEmail to get verified user information from database using email address
+// TODO: implement this
+func (p *provider) GetVerifiedUserByEmail(ctx context.Context, email string) (models.User, error) {
+	var user models.User
+	return user, nil
+}
+
+// DeleteUnverifyEmailUser to delete user information from database
+// TODO: implement this
+func (p *provider) DeleteUnverifyEmailUsers(ctx context.Context, email string) error {
+	return nil
+}
+
 // GetUserByEmail to get user information from database using email address
 func (p *provider) GetUserByEmail(ctx context.Context, email string) (models.User, error) {
 	var user models.User
