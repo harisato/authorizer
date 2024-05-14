@@ -87,7 +87,18 @@ func EvmWalletLoginResolver(ctx context.Context, params model.EvmWalletLoginInpu
 		user.SignupMethods = provider
 		user.Roles = defaultRolesString
 
-		if user.Email != "<nil>" {
+		isEmailVerificationDisabled, err := memorystore.Provider.GetBoolStoreEnvVariable(constants.EnvKeyDisableEmailVerification)
+		if err != nil {
+			log.Debug("Error getting email verification disabled: ", err)
+			isEmailVerificationDisabled = true
+		}
+		if isEmailVerificationDisabled {
+			log.Debug("Email verification disabled")
+			now := time.Now().Unix()
+			user.EmailVerifiedAt = &now
+		}
+
+		if user.Email != "<nil>" && user.Email != "" {
 			now := time.Now().Unix()
 			user.EmailVerifiedAt = &now
 		}
@@ -95,6 +106,18 @@ func EvmWalletLoginResolver(ctx context.Context, params model.EvmWalletLoginInpu
 		isSignUp = true
 	} else {
 		user = existingUser
+
+		isEmailVerificationDisabled, err := memorystore.Provider.GetBoolStoreEnvVariable(constants.EnvKeyDisableEmailVerification)
+		if err != nil {
+			log.Debug("Error getting email verification disabled: ", err)
+			isEmailVerificationDisabled = true
+		}
+		if isEmailVerificationDisabled {
+			log.Debug("Email verification disabled")
+			now := time.Now().Unix()
+			user.EmailVerifiedAt = &now
+		}
+
 		log.Debug("Get existing user OK: ", user.ID)
 		if user.Email != "<nil>" && user.EmailVerifiedAt == nil {
 			log.Debug("User email is not verified")

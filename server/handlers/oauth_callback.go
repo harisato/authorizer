@@ -97,20 +97,24 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 		isSignUp := false
 
 		// check oauth user has email
-		fmt.Print("User Email: ", user.Email)
-		if user.Email == "<nil>" {
+		log.Debug("User Email: ", user.Email)
+		if user.Email == "<nil>" || user.Email == "" {
 
+			existingUser := models.User{}
 			// if does not have email => create a new user without email
 			if provider == constants.AuthRecipeMethodFacebook {
-				user, err = db.Provider.GetUserByFbId(ctx, user.FbId)
+				log.Debug("fb id: ", user.FbId)
+				existingUser, err = db.Provider.GetUserByFbId(ctx, user.FbId)
 			}
 
-			if err != nil && provider == constants.AuthRecipeMethodZalo {
-				user, err = db.Provider.GetUserByZaloId(ctx, user.ZaloId)
+			if provider == constants.AuthRecipeMethodZalo {
+				log.Debug("zalo id: ", user.ZaloId)
+				existingUser, err = db.Provider.GetUserByZaloId(ctx, user.ZaloId)
 			}
 
 			if err != nil {
-				fmt.Println(provider + ": register user")
+				log.Debug("query existing user err: ", err)
+				log.Debug("register user: ", provider)
 				user, err = insertUser(ctx, provider, user, inputRoles)
 				if err != nil {
 					log.Debug("Failed to register user: ", err)
@@ -118,13 +122,20 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 					return
 				}
 				isSignUp = true
+			} else {
+				user = existingUser
+				log.Debug("find user ok")
+				log.Debug("userId: ", existingUser.ID)
 			}
 
 		} else {
+			log.Debug("find verified email record")
 
 			// else find verified email record
 			existingUser, err := db.Provider.GetVerifiedUserByEmail(ctx, user.Email)
 			if err != nil {
+
+				log.Debug("delete all unverify email record on db and insert new one with verified email")
 				// delete all unverify email record on db and insert new one with verified email
 				err = db.Provider.DeleteUnverifyEmailUsers(ctx, user.Email)
 				if err != nil {
@@ -141,6 +152,7 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 				}
 				isSignUp = true
 			} else {
+				log.Debug("update existing user")
 				// update existing user
 				user, err = updateUser(ctx, provider, existingUser, inputRoles)
 				if err != nil {
@@ -848,7 +860,7 @@ func insertUser(ctx *gin.Context, provider string, user models.User, inputRoles 
 
 	user.Roles = strings.Join(inputRoles, ",")
 
-	if user.Email != "<nil>" {
+	if user.Email != "<nil>" && user.Email != "" {
 		now := time.Now().Unix()
 		user.EmailVerifiedAt = &now
 	}
