@@ -64,10 +64,10 @@ func LoginResolver(ctx context.Context, params model.LoginInput) (*model.AuthRes
 		return res, fmt.Errorf(`user has not signed up email & password`)
 	}
 
-	if user.EmailVerifiedAt == nil {
-		log.Debug("User email is not verified")
-		return res, fmt.Errorf(`email not verified`)
-	}
+	// if user.EmailVerifiedAt == nil {
+	// 	log.Debug("User email is not verified")
+	// 	return res, fmt.Errorf(`email not verified`)
+	// }
 
 	err = bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(params.Password))
 

@@ -103,6 +103,9 @@ func EvmWalletLoginResolver(ctx context.Context, params model.EvmWalletLoginInpu
 			user.EmailVerifiedAt = &now
 		}
 		user, _ = db.Provider.AddUser(ctx, user)
+		// For unknown resion, this user id is difference with user id in db. Hotfix: query from db after insert
+		existingUser, _ := db.Provider.GetUserByWalletAddress(ctx, address.String())
+		user = existingUser
 		isSignUp = true
 	} else {
 		user = existingUser
@@ -119,10 +122,10 @@ func EvmWalletLoginResolver(ctx context.Context, params model.EvmWalletLoginInpu
 		}
 
 		log.Debug("Get existing user OK: ", user.ID)
-		if user.Email != "<nil>" && user.EmailVerifiedAt == nil {
-			log.Debug("User email is not verified")
-			return res, fmt.Errorf(`email not verified`)
-		}
+		// if user.Email != "<nil>" && user.EmailVerifiedAt == nil {
+		// 	log.Debug("User email is not verified")
+		// 	return res, fmt.Errorf(`email not verified`)
+		// }
 
 		if user.RevokedTimestamp != nil {
 			log.Debug("User access revoked at: ", user.RevokedTimestamp)
