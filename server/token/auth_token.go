@@ -105,7 +105,17 @@ func CreateAuthToken(gc *gin.Context, user models.User, roles, scope []string, l
 
 // CreateSessionToken creates a new session token
 func CreateSessionToken(user models.User, nonce string, roles, scope []string, loginMethod string) (*SessionData, string, int64, error) {
-	expiresAt := time.Now().AddDate(1, 0, 0).Unix()
+	// expiresAt := time.Now().AddDate(1, 0, 0).Unix()
+	expireTime, err := memorystore.Provider.GetStringStoreEnvVariable(constants.EnvKeyAccessTokenExpiryTime)
+	if err != nil {
+		return nil, "", 0, err
+	}
+	expiryBound, err := utils.ParseDurationInSeconds(expireTime)
+	if err != nil {
+		expiryBound = time.Minute * 30
+	}
+	expiresAt := time.Now().Add(expiryBound).Unix()
+
 	fingerPrintMap := &SessionData{
 		Nonce:       nonce,
 		Roles:       roles,

@@ -151,7 +151,7 @@ func EvmWalletLoginResolver(ctx context.Context, params model.EvmWalletLoginInpu
 		roles = append(roles, "creator")
 		user.Roles = strings.Join(roles, ",")
 	}
-	scope := []string{"openid", "email", "profile"}
+	scope := []string{"openid", "email", "profile", "offline_access"}
 
 	code := ""
 	nonce := ""
